@@ -14,7 +14,7 @@ Scans IPs by port scanning, banner grabbing, and brute forcing
 
 Saves discovered camera details and brute force attempts to a file
 
-Edit the following subnet and credentials as needed before executing the script:
+Edit the subnet and credentials in the 'try' block as needed before executing the script:
 
 ```
 target_subnet = "192.168.0.0/24"
