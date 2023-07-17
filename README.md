@@ -1,4 +1,4 @@
-This Python code scans a subnet for CCTV cameras, fingerprints them, and attempts to brute force default credentials.
+This Python script scans a subnet for CCTV cameras, fingerprints them, and attempts to brute force default credentials.
 
 Sets up scanning parameters; subnet, IP queue, camera list, credentials list
 
