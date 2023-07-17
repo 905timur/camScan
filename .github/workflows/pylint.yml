@@ -1,0 +1,39 @@
+name: Pylint
+
+on:
+
+  push:
+
+    branches:
+
+      - main
+
+jobs:
+
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/setup-python@v2
+
+        with:
+
+          python-version: '3.9'
+
+          distribution: 'bullseye'
+
+      - name: Install Pylint Dependencies
+
+        run: |
+
+          pip install pylint
+
+          pip install -r requirements.txt
+
+      - name: Run Pylint
+
+        run: |
+
+          pylint . 
