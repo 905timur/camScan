@@ -3,10 +3,8 @@ import threading
 import requests
 from queue import Queue
 
-subnet = '192.168.1.0/24'
-queue = Queue()
-cameras = []
-credentials = [('admin', 'admin'), ('admin', 'root'), ('admin', 'toor')]
+def ip_range(subnet):
+    return [ip for ip in range(subnet.split("/")[0], subnet.split("/")[0] + 256)]
 
 def portscan(ip, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,19 +38,24 @@ def scan(ip):
         get_camera(ip, 80)
         bruteforce(ip)
 
-for ip in ip_range(subnet):
-    queue.put(ip)
+try:
+    cameras = []
+    queue = Queue()
+    for ip in ip_range(subnet):
+        queue.put(ip)
 
-threads = [] 
+    threads = [] 
 
-for i in range(256):
-    thread = threading.Thread(target=scan, args=(queue.get(),))
-    thread.start()
-    threads.append(thread)
+    for i in range(256):
+        thread = threading.Thread(target=scan, args=(queue.get(),))
+        thread.start()
+        threads.append(thread)
 
-for thread in threads:
-    thread.join()
-    
-with open('cameras.txt', 'w') as f:
-    for camera in cameras:
-        f.write(f"{camera['ip']} {camera['brand']} {camera['model']}\n")
+    for thread in threads:
+        thread.join()
+
+    with open('cameras.txt', 'w') as f:
+        for camera in cameras:
+            f.write(f"{camera['ip']} {camera['brand']} {camera['model']}\n")
+except Exception as e:
+    print(e)
