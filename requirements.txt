@@ -1,0 +1,5 @@
+socket
+asyncio
+requests
+netaddr
+logging 
